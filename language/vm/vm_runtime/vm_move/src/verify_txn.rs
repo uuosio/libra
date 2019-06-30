@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+
 use crate::{
     account::AccountData,
     assert_prologue_disparity, assert_prologue_parity,
@@ -8,6 +9,10 @@ use crate::{
     compile::{compile_program_with_address, compile_script},
     executor::FakeExecutor,
 };
+
+
+use crate::compile_and_execute;
+use vm::assert_ok;
 use assert_matches::assert_matches;
 use config::config::{NodeConfigHelpers, VMPublishingOption};
 use crypto::signing::KeyPair;
@@ -498,6 +503,8 @@ pub fn test_open_publishing_invalid_address() {
     };
 }
 
+use std::fs;
+
 pub fn test_open_publishing() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
@@ -508,33 +515,8 @@ pub fn test_open_publishing() {
     executor.add_account_data(&sender);
     executor.add_account_data(&receiver);
 
-    let program = String::from(
-        "
-        modules:
-        module M {
-            public max(a: u64, b: u64): u64 {
-                if (copy(a) > copy(b)) {
-                    return copy(a);
-                } else {
-                    return copy(b);
-                }
-                return 0;
-            }
-
-            public sum(a: u64, b: u64): u64 {
-                let c: u64;
-                c = copy(a) + copy(b);
-                return copy(c);
-            }
-        }
-        script:
-        import 0x0.LibraAccount;
-        main (payee: address, amount: u64) {
-          LibraAccount.pay_from_sender(move(payee), move(amount));
-          return;
-        }
-        ",
-    );
+    let program = fs::read_to_string("/Users/newworld/dev/libra/tt.mvir")
+            .expect("Something went wrong reading the file");
 
     let mut args: Vec<TransactionArgument> = Vec::new();
     args.push(TransactionArgument::Address(*receiver.address()));
@@ -550,24 +532,4 @@ pub fn test_open_publishing() {
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(VMStatus::Execution(ExecutionStatus::Executed))
     );
-}
-
-
-
-#[no_mangle]
-pub extern fn add(first: i32, second: i32) -> i32
-{
-    test_open_publishing();
-    unsafe {
-        say_hello();
-    }
-    first + second
-}
-
-extern crate libc;
-use libc::size_t;
-
-#[link(name = "hello")]
-extern {
-    fn say_hello();
 }

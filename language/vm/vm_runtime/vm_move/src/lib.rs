@@ -5,6 +5,10 @@
 //!
 //! This crate contains helpers for executing tests against the Libra VM.
 
+#[macro_use]
+extern crate timeit;
+
+use vm::assert_ok;
 use ::compiler::{compiler, parser::parse_program};
 use data_store::FakeDataStore;
 use types::{
@@ -84,20 +88,53 @@ macro_rules! assert_prologue_disparity {
     };
 }
 
+use std::time::{SystemTime, UNIX_EPOCH};
 
+pub fn compile_and_execute2(program: &str, args: Vec<TransactionArgument>) {
+    let address = AccountAddress::default();
 
-use vm::assert_ok;
+    let parsed_program = parse_program(&program).unwrap();
+    let compiled_program = compiler::compile_program(&address, &parsed_program, &[]).unwrap();
+
+    let (compiled_script, modules) =
+        verify(&address, compiled_program.script, compiled_program.modules);
+
+    let start = SystemTime::now();
+    let duration_start = start.duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+
+    execute(compiled_script, args, modules);
+
+    let end = SystemTime::now();
+    let duration_end = end.duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+
+    println!("+++++cost: {:?}", duration_end - duration_start);
+}
+
+use std::fs;
 
 fn simple_unpack() {
-    let program = String::from(
-        r###"
-import 0x0.LibraAccount;
-main (payee: address, amount: u64) {
-  LibraAccount.pay_from_sender(move(payee), move(amount));
-  return;
+    let program = fs::read_to_string("/Users/newworld/dev/libra/tt.mvir")
+            .expect("Something went wrong reading the file");
+    compile_and_execute2(&program, vec![]);
 }
-"###,
-    );
-    println!("hello,world");
-    assert_ok!(compile_and_execute(&program, vec![]));
+
+#[no_mangle]
+pub extern fn add(first: i32, second: i32) -> i32
+{
+    simple_unpack();
+//    test_open_publishing();
+    unsafe {
+        say_hello();
+    }
+    first + second
+}
+
+extern crate libc;
+use libc::size_t;
+
+#[link(name = "hello")]
+extern {
+    fn say_hello();
 }

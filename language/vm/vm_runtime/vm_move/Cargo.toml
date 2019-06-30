@@ -1,5 +1,5 @@
 [package]
-name = "vm_test"
+name = "vm_move"
 version = "0.1.0"
 edition = "2018"
 authors = ["Libra Association <opensource@libra.org>"]
@@ -30,7 +30,8 @@ config =  { path = "../../../../config"}
 logger = { path = "../../../../common/logger" }
 stdlib = { path = "../../../stdlib" }
 libc = "0.2.0"
+timeit = "0.1.2"
 
 [lib]
-name = "vm_test"
+name = "vm_move"
 crate-type = ["dylib"]
