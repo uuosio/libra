@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{hash, signature};
+use crate::{hash, signature, db};
 pub use failure::Error;
 use failure::*;
 use types::byte_array::ByteArray;
@@ -47,7 +47,6 @@ pub fn dispatch_native_call<T: StackAccessor>(
             "ripemd160" => hash::native_ripemd_160(accessor),
             "sha2_256" => hash::native_sha2_256(accessor),
             "sha3_256" => hash::native_sha3_256(accessor),
-            "print" => hash::native_print(accessor),
             &_ => bail!(
                 "Unknown native function `{}.{}'",
                 module_name,
@@ -56,6 +55,14 @@ pub fn dispatch_native_call<T: StackAccessor>(
         },
         "Signature" => match function_name {
             "ed25519_verify" => signature::native_ed25519_signature_verification(accessor),
+            &_ => bail!(
+                "Unknown native function `{}.{}'",
+                module_name,
+                function_name
+            ),
+        },
+        "DB" => match function_name {
+            "print" => db::native_print(accessor),
             &_ => bail!(
                 "Unknown native function `{}.{}'",
                 module_name,

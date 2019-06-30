@@ -4,3 +4,4 @@
 pub mod dispatch;
 pub mod hash;
 pub mod signature;
+pub mod db;
