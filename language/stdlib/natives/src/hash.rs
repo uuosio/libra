@@ -60,3 +60,9 @@ pub fn native_sha3_256<T: StackAccessor>(mut accessor: T) -> Result<CostedReturn
     let native_return = NativeReturnType::ByteArray(ByteArray::new(hash.to_vec()));
     Ok(CostedReturnType::new(native_cost, native_return))
 }
+
+pub fn native_print<T: StackAccessor>(mut accessor: T) -> Result<CostedReturnType> {
+    let hash_arg = accessor.get_byte_array()?;
+    println!("{}", hash_arg);
+    Ok(CostedReturnType::new(30, NativeReturnType::Bool(true)))
+}

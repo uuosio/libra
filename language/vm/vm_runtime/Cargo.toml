@@ -36,3 +36,7 @@ features = ["nightly", "push"]
 
 [features]
 instruction_synthesis = []
+
+[lib]
+name = "vm_runtime"
+crate-type = ["dylib"]

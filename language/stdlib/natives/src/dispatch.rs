@@ -46,6 +46,7 @@ pub fn dispatch_native_call<T: StackAccessor>(
             "ripemd160" => hash::native_ripemd_160(accessor),
             "sha2_256" => hash::native_sha2_256(accessor),
             "sha3_256" => hash::native_sha3_256(accessor),
+            "print" => hash::native_print(accessor),
             &_ => bail!(
                 "Unknown native function `{}.{}'",
                 module_name,
