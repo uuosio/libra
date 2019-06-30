@@ -5,11 +5,8 @@
 //!
 //! This crate contains helpers for executing tests against the Libra VM.
 
-#[macro_use]
-extern crate timeit;
-
-use vm::assert_ok;
-use ::compiler::{compiler, parser::parse_program};
+use bytecode_verifier::{VerifiedModule, VerifiedScript};
+use compiler::Compiler;
 use data_store::FakeDataStore;
 use types::{
     access_path::AccessPath, account_address::AccountAddress, transaction::TransactionArgument,
@@ -30,27 +27,26 @@ pub mod compile;
 pub mod data_store;
 pub mod executor;
 pub mod gas_costs;
-
-pub mod verify_txn;
-
 mod proptest_types;
 
 /// Compiles a program with the given arguments and executes it in the VM.
 pub fn compile_and_execute(program: &str, args: Vec<TransactionArgument>) -> VMResult<()> {
     let address = AccountAddress::default();
-
-    let parsed_program = parse_program(&program).unwrap();
-    let compiled_program = compiler::compile_program(&address, &parsed_program, &[]).unwrap();
-
-    let (compiled_script, modules) =
+    let compiler = Compiler {
+        code: program,
+        address,
+        ..Compiler::default()
+    };
+    let compiled_program = compiler.into_compiled_program().expect("Failed to compile");
+    let (verified_script, modules) =
         verify(&address, compiled_program.script, compiled_program.modules);
-    execute(compiled_script, args, modules)
+    execute(verified_script, args, modules)
 }
 
 pub fn execute(
-    script: CompiledScript,
+    script: VerifiedScript,
     args: Vec<TransactionArgument>,
-    modules: Vec<CompiledModule>,
+    modules: Vec<VerifiedModule>,
 ) -> VMResult<()> {
     // set up the DB
     let mut data_view = FakeDataStore::default();
@@ -65,10 +61,10 @@ fn verify(
     sender_address: &AccountAddress,
     compiled_script: CompiledScript,
     modules: Vec<CompiledModule>,
-) -> (CompiledScript, Vec<CompiledModule>) {
-    let (verified_script, verified_modules, statuses) =
-        static_verify_program(sender_address, compiled_script, modules);
-    assert_eq!(statuses, vec![]);
+) -> (VerifiedScript, Vec<VerifiedModule>) {
+    let (verified_script, verified_modules) =
+        static_verify_program(sender_address, compiled_script, modules)
+            .expect("verification failure");
     (verified_script, verified_modules)
 }
 
@@ -92,18 +88,19 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn compile_and_execute2(program: &str, args: Vec<TransactionArgument>) {
     let address = AccountAddress::default();
-
-    let parsed_program = parse_program(&program).unwrap();
-    let compiled_program = compiler::compile_program(&address, &parsed_program, &[]).unwrap();
-
-    let (compiled_script, modules) =
+    let compiler = Compiler {
+        code: program,
+        address,
+        ..Compiler::default()
+    };
+    let compiled_program = compiler.into_compiled_program().expect("Failed to compile");
+    let (verified_script, modules) =
         verify(&address, compiled_program.script, compiled_program.modules);
 
     let start = SystemTime::now();
     let duration_start = start.duration_since(UNIX_EPOCH)
         .expect("Time went backwards");
-
-    execute(compiled_script, args, modules);
+    execute(verified_script, args, modules);
 
     let end = SystemTime::now();
     let duration_end = end.duration_since(UNIX_EPOCH)
