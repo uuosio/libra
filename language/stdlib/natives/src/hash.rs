@@ -20,6 +20,8 @@ pub fn native_keccak_256<T: StackAccessor>(mut accessor: T) -> Result<CostedRetu
     let hash_arg = accessor.get_byte_array()?;
     let native_cost = KECCAK_COST * hash_arg.len() as u64;
 
+    println!("{}", hash_arg);
+
     keccak.update(hash_arg.as_bytes());
     keccak.finalize(&mut hash);
 
@@ -64,5 +66,5 @@ pub fn native_sha3_256<T: StackAccessor>(mut accessor: T) -> Result<CostedReturn
 pub fn native_print<T: StackAccessor>(mut accessor: T) -> Result<CostedReturnType> {
     let hash_arg = accessor.get_byte_array()?;
     println!("{}", hash_arg);
-    Ok(CostedReturnType::new(30, NativeReturnType::Bool(true)))
+    Ok(CostedReturnType::new(0, NativeReturnType::Bool(true)))
 }
