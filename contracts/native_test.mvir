@@ -15,16 +15,18 @@ module Test {
 
 }
 module Hash {
-    native public keccak25(data: bytearray): bytearray;
+    native public keccak256(data: bytearray): bytearray;
     native public ripemd160(data: bytearray): bytearray;
     native public sha2_256(data: bytearray): bytearray;
     native public sha3_256(data: bytearray): bytearray;
-    native public print(data: bytearray);
+    native public print(data: bytearray): bool;
 }
+
 script:
 import 0x0.Test;
 import 0x0.Hash;
 main() {
+    let r: bool;
     let input: bytearray;
     let output: bytearray;
     let t: R#Test.T;
@@ -33,7 +35,7 @@ main() {
     Test.unpack_t(move(t));
 
     input = b"6162633333333333AA";
-    output = Hash.print(copy(input));
-
+    r = Hash.print(copy(input));
+//    Hash.print(copy(input));
     return;
 }

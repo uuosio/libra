@@ -112,7 +112,7 @@ pub fn compile_and_execute2(program: &str, args: Vec<TransactionArgument>) {
 use std::fs;
 
 fn simple_unpack() {
-    let program = fs::read_to_string("/Users/newworld/dev/libra/tt.mvir")
+    let program = fs::read_to_string("./contracts/native_test.mvir")
             .expect("Something went wrong reading the file");
     compile_and_execute2(&program, vec![]);
 }
