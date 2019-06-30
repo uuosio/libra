@@ -245,6 +245,8 @@ where
                         .resolve_function_ref(self_module, idx)?
                         .ok_or(VMInvariantViolation::LinkerError)?;
 
+                    println!("{} is_native(): {}", callee_function_ref.name(), callee_function_ref.is_native());
+
                     if callee_function_ref.is_native() {
                         let module_name: &str = callee_function_ref.module().module.name();
                         let function_name: &str = callee_function_ref.name();
