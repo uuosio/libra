@@ -104,6 +104,7 @@ impl GasMeter {
         'alloc: 'txn,
         P: ModuleCache<'alloc>,
     {
+        return Ok(Ok(0));
         // Get the base cost for the instruction.
         let instruction_reqs = match instr {
             Bytecode::Add
@@ -285,6 +286,7 @@ impl GasMeter {
         'alloc: 'txn,
         P: ModuleCache<'alloc>,
     {
+        return Ok(Ok(()));
         if !self.meter_on {
             return Ok(Ok(()));
         }
