@@ -20,6 +20,8 @@ Cargo.lock
 *.iml
 .vscode
 
+*.dylib
+
 # Ignore wallet mnemonic files used for deterministic key derivation
 *.mnemonic
 
