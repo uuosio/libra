@@ -1,0 +1,35 @@
+modules:
+module Test {
+    resource T { i: u64, b: bool }
+
+    public new_t(): R#Self.T {
+        return T { i: 111, b: false };
+    }
+
+    public unpack_t(t: R#Self.T) {
+        let i: u64;
+        let flag: bool;
+        T { i, b: flag } = move(t);
+        return;
+    }
+
+    public unpack_t2(t: R#Self.T): u64 {
+        let i: u64;
+        let flag: bool;
+
+        let i2: u64;
+        let flag2: bool;
+        T { i, b: flag } = move(t);
+        return 8888;
+    }
+}
+script:
+import 0x0.Test;
+main() {
+    let t: R#Test.T;
+
+    t = Test.new_t();
+    Test.unpack_t(move(t));
+
+    return;
+}
