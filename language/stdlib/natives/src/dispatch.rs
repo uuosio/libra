@@ -10,6 +10,7 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 pub enum NativeReturnType {
     ByteArray(ByteArray),
     Bool(bool),
+    UInt64(u64),
 }
 
 pub struct CostedReturnType {
@@ -33,6 +34,7 @@ impl CostedReturnType {
 
 pub trait StackAccessor {
     fn get_byte_array(&mut self) -> Result<ByteArray>;
+    fn get_uint64(&mut self) -> Result<u64>;
 }
 
 pub fn dispatch_native_call<T: StackAccessor>(
@@ -63,6 +65,7 @@ pub fn dispatch_native_call<T: StackAccessor>(
         },
         "DB" => match function_name {
             "print" => db::native_print(accessor),
+            "store_i64" => db::native_store_i64(accessor),
             &_ => bail!(
                 "Unknown native function `{}.{}'",
                 module_name,

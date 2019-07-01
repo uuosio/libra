@@ -167,4 +167,14 @@ where
             None => Err(VMStaticViolation::TypeMismatch.into()),
         }
     }
+    fn get_uint64(&mut self) -> NativeResult<u64> {
+        match self.pop()?.value() {
+            Some(v) => match MutVal::try_own(v) {
+                Ok(Value::U64(arr)) => Ok(arr),
+                Err(err) => Err(err.into()),
+                _ => Err(VMStaticViolation::TypeMismatch.into()),
+            },
+            None => Err(VMStaticViolation::TypeMismatch.into()),
+        }
+    }
 }

@@ -17,6 +17,9 @@ use vm::{
 };
 use vm_runtime::{execute_function, static_verify_program};
 
+use vm::assert_ok;
+use std::fs;
+
 #[cfg(test)]
 mod tests;
 
@@ -86,7 +89,7 @@ macro_rules! assert_prologue_disparity {
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub fn compile_and_execute2(program: &str, args: Vec<TransactionArgument>) {
+pub fn compile_and_execute2(program: &str, args: Vec<TransactionArgument>) -> VMResult<()> {
     let address = AccountAddress::default();
     let compiler = Compiler {
         code: program,
@@ -100,21 +103,20 @@ pub fn compile_and_execute2(program: &str, args: Vec<TransactionArgument>) {
     let start = SystemTime::now();
     let duration_start = start.duration_since(UNIX_EPOCH)
         .expect("Time went backwards");
-    execute(verified_script, args, modules);
+    let ret = execute(verified_script, args, modules);
 
     let end = SystemTime::now();
     let duration_end = end.duration_since(UNIX_EPOCH)
         .expect("Time went backwards");
 
     println!("+++++cost: {:?}", duration_end - duration_start);
+    return ret;
 }
-
-use std::fs;
 
 fn simple_unpack() {
     let program = fs::read_to_string("./contracts/native_test.mvir")
             .expect("Something went wrong reading the file");
-    compile_and_execute2(&program, vec![]);
+    assert_ok!(compile_and_execute2(&program, vec![]));
 }
 
 #[no_mangle]
