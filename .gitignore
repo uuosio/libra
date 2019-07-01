@@ -8,6 +8,10 @@
 # More information here https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
 Cargo.lock
 
+language/stdlib/natives/build.rs
+language/vm/vm_runtime/build.rs
+language/vm/vm_runtime/vm_move/build.rs
+
 # Ignore generated files in proto folders
 **/proto/*.rs
 !**/proto/mod.rs

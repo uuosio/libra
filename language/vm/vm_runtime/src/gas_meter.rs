@@ -8,6 +8,7 @@ use crate::{
 };
 use types::account_address::ADDRESS_LENGTH;
 use vm::{access::ModuleAccess, errors::*, file_format::Bytecode, gas_schedule::*};
+use move_ir_natives::{vm_checktime};
 
 /// Holds the state of the gas meter.
 pub struct GasMeter {
@@ -104,6 +105,7 @@ impl GasMeter {
         'alloc: 'txn,
         P: ModuleCache<'alloc>,
     {
+//        vm_checktime();
         let flag = true;
         if flag {
             return Ok(Ok(0));

@@ -12,3 +12,4 @@ nextgen_crypto = { path = "../../../crypto/nextgen_crypto" }
 failure = { path = "../../../common/failure_ext", package = "failure_ext" }
 tiny-keccak = "1.4.2"
 types = { path = "../../../types" }
+libc = "0.2.0"
