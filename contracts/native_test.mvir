@@ -12,11 +12,23 @@ module Test {
         T { i, b: flag } = move(t);
         return;
     }
-
 }
 
 module DB {
     native public print(data: bytearray): bool;
+    native public store_i64(scope: u64, table: u64, payer: u64, id: u64,  data: bytearray): bool;
+    native public db_store_i64(scope: u64, table: u64, payer: u64, id: u64,  data: bytearray):u64;
+    native public db_store_i64_ex(code: u64, scope: u64, table: u64, payer: u64, id: u64,  data: bytearray): u64;
+
+    native public db_update_i64(iterator: u64, payer: u64, data: bytearray);
+    native public db_remove_i64(iterator: u64);
+    native public db_get_i64(iterator: u64, data: bytearray):u64;
+//    native public db_next_i64(iterator: u64, uint64_t* primary):u64;
+//    native public db_previous_i64(iterator: u64, uint64_t* primary):u64;
+    native public db_find_i64(code: u64, scope: u64, table: u64, id: u64):u64;
+    native public db_lowerbound_i64(code: u64, scope: u64, table: u64, id: u64):u64;
+    native public db_upperbound_i64(code: u64, scope: u64, table: u64, id: u64):u64;
+    native public db_end_i64(code: u64, scope: u64, table: u64):u64;
 }
 
 script:
@@ -26,14 +38,21 @@ import 0x0.DB;
 main() {
     let r: bool;
     let input: bytearray;
+    let input2: bytearray;
     let output: bytearray;
     let t: R#Test.T;
+    let n: u64;
 
     t = Test.new_t();
     Test.unpack_t(move(t));
 
     input = b"6162633333333333AAAAAABB";
+    input2 = b"8888";
     r = DB.print(copy(input));
     r = DB.print(copy(input));
+    n = 8;
+    r = DB.store_i64(copy(n), copy(n), copy(n), copy(n), copy(input));
+//    r = DB.store_i64(copy(input2), copy(input), copy(input), copy(input), copy(input));
+
     return;
 }
