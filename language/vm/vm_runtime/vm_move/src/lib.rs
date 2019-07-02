@@ -21,6 +21,7 @@ use vm::{
 
 use vm_runtime::{
     execute_function, static_verify_program,
+    data_cache::{RemoteCache, TransactionDataCache},
     code_cache::module_cache::{ModuleCache, VMModuleCache},
     execution_stack::ExecutionStack,
     loaded_data::{
@@ -176,7 +177,6 @@ pub fn compile_and_execute2(receiver:u64, program: &str, args: Vec<TransactionAr
     let duration_start = start.duration_since(UNIX_EPOCH)
         .expect("Time went backwards");
     
-
     let mut map = HASHMAP.lock().unwrap();
     map.insert(receiver, verified_script);
 
@@ -196,24 +196,25 @@ pub fn compile_and_execute2(receiver:u64, program: &str, args: Vec<TransactionAr
     return ret;
 }
 
+extern crate libc;
+use libc::size_t;
+use std::slice;
+use std::str;
 
 #[no_mangle]
-pub extern fn vm_apply(receiver: i64, code: i64, action: i64) -> i32
+pub extern fn vm_apply(receiver: u64, code: u64, action: u64, mut ptr: *mut u8, size: size_t) -> i32
 {
-    println!("++++++++++++++++++hello, apply!!!!!!!!!{}{}{}", receiver, code, action);
-    unsafe {
-        say_hello();
-    }
-    let receiver = 0;
+//    println!("++++++++++++++++++hello, apply!!!!!!!!!{}{}{}", receiver, code, action);
+//    let program = unsafe { slice::from_raw_parts_mut(ptr, size) };
+//    let program2 = str::from_utf8(program);
+
     let program = fs::read_to_string("./contracts/native_test.mvir")
             .expect("Something went wrong reading the file");
+
     assert_ok!(compile_and_execute2(receiver, &program, vec![]));
 //    test_open_publishing();
     return 0;
 }
-
-extern crate libc;
-use libc::size_t;
 
 #[link(name = "eosiolib_native")]
 extern {
