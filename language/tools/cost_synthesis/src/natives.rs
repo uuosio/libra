@@ -59,4 +59,7 @@ impl StackAccessor for &mut StackAccessorMocker {
     fn get_byte_array(&mut self) -> Result<ByteArray> {
         Ok(std::mem::replace(&mut self.curr_byte_array, None).unwrap())
     }
+    fn get_uint64(&mut self) -> Result<u64> {
+        Ok(0)
+    }
 }

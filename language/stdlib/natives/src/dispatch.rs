@@ -42,7 +42,6 @@ pub fn dispatch_native_call<T: StackAccessor>(
     module_name: &str,
     function_name: &str,
 ) -> Result<CostedReturnType> {
-    println!("++++++function_name: {}", function_name);
     match module_name {
         "Hash" => match function_name {
             "keccak256" => hash::native_keccak_256(accessor),
