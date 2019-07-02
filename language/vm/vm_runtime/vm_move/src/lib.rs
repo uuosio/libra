@@ -11,11 +11,29 @@ use data_store::FakeDataStore;
 use types::{
     access_path::AccessPath, account_address::AccountAddress, transaction::TransactionArgument,
 };
+
 use vm::{
+    access::ModuleAccess,
     errors::*,
-    file_format::{CompiledModule, CompiledScript},
+    file_format::{Bytecode, CodeOffset, CompiledModule, CompiledScript, StructDefinitionIndex},
+    transaction_metadata::TransactionMetadata,
 };
-use vm_runtime::{execute_function, static_verify_program};
+
+use vm_runtime::{
+    execute_function, static_verify_program,
+    code_cache::module_cache::{ModuleCache, VMModuleCache},
+    execution_stack::ExecutionStack,
+    loaded_data::{
+        function::{FunctionRef, FunctionReference},
+        loaded_module::LoadedModule,
+    },
+    txn_executor::TransactionExecutor,
+    gas_meter::GasMeter
+};
+
+use vm_cache_map::Arena;
+use std::collections::HashMap;
+use lazy_static::lazy_static;
 
 use vm::assert_ok;
 use std::fs;
@@ -31,6 +49,46 @@ pub mod data_store;
 pub mod executor;
 pub mod gas_costs;
 mod proptest_types;
+
+use std::time::{SystemTime, UNIX_EPOCH};
+
+/// A helper function for executing a single script. Will be deprecated once we have a better
+/// testing framework for executing arbitrary script.
+pub fn execute_function2(
+    caller_script: VerifiedScript,
+    modules: Vec<VerifiedModule>,
+    _args: Vec<TransactionArgument>,
+    data_cache: &RemoteCache,
+) -> VMResult<()> {
+    let allocator = Arena::new();
+    let module_cache = VMModuleCache::new(&allocator);
+    let main_module = caller_script.into_module();
+    let loaded_main = LoadedModule::new(main_module);
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
+    for m in modules {
+        module_cache.cache_module(m);
+    }
+    let mut vm = TransactionExecutor {
+        execution_stack: ExecutionStack::new(&module_cache),
+        gas_meter: GasMeter::new(10_000),
+        txn_data: TransactionMetadata::default(),
+        event_data: Vec::new(),
+        data_view: TransactionDataCache::new(data_cache),
+    };
+
+    let start = SystemTime::now();
+    let duration_start = start.duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+
+    let ret = vm.execute_function_impl(entry_func);
+
+    let end = SystemTime::now();
+    let duration_end = end.duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+    println!("+++++cost: {:?}", duration_end - duration_start);
+
+    return ret;
+}
 
 /// Compiles a program with the given arguments and executes it in the VM.
 pub fn compile_and_execute(program: &str, args: Vec<TransactionArgument>) -> VMResult<()> {
@@ -57,7 +115,7 @@ pub fn execute(
         AccessPath::new(AccountAddress::random(), vec![]),
         vec![0, 0],
     );
-    execute_function(script, modules, args, &data_view)
+    execute_function2(script, modules, args, &data_view)
 }
 
 fn verify(
@@ -87,9 +145,23 @@ macro_rules! assert_prologue_disparity {
     };
 }
 
-use std::time::{SystemTime, UNIX_EPOCH};
+lazy_static! {
+    // Since it's mutable and shared, use mutex
+    static ref codecache: HashMap<u64, VerifiedScript> = HashMap::new();
+}
 
-pub fn compile_and_execute2(program: &str, args: Vec<TransactionArgument>) -> VMResult<()> {
+use std::sync::Mutex;
+
+lazy_static! {
+    static ref HASHMAP: Mutex<HashMap<u64, VerifiedScript>> = {
+        let mut m = HashMap::new();
+        Mutex::new(m)
+    };    
+}
+
+pub fn compile_and_execute2(receiver:u64, program: &str, args: Vec<TransactionArgument>) -> VMResult<()> {
+//    let codecache: &'static HashMap<u64, VerifiedScript> = &mut HashMap::new();
+
     let address = AccountAddress::default();
     let compiler = Compiler {
         code: program,
@@ -103,7 +175,18 @@ pub fn compile_and_execute2(program: &str, args: Vec<TransactionArgument>) -> VM
     let start = SystemTime::now();
     let duration_start = start.duration_since(UNIX_EPOCH)
         .expect("Time went backwards");
-    let ret = execute(verified_script, args, modules);
+    
+
+    let mut map = HASHMAP.lock().unwrap();
+    map.insert(receiver, verified_script);
+
+    let s = map.get(&receiver);
+
+    let ret = execute((*s.unwrap()).clone(), args, modules);
+
+//    let s = map.get(&receiver);
+
+//    PRIVILEGES.insert("Jim", vec!["user"]);
 
     let end = SystemTime::now();
     let duration_end = end.duration_since(UNIX_EPOCH)
@@ -113,21 +196,20 @@ pub fn compile_and_execute2(program: &str, args: Vec<TransactionArgument>) -> VM
     return ret;
 }
 
-fn simple_unpack() {
-    let program = fs::read_to_string("./contracts/native_test.mvir")
-            .expect("Something went wrong reading the file");
-    assert_ok!(compile_and_execute2(&program, vec![]));
-}
 
 #[no_mangle]
-pub extern fn add(first: i32, second: i32) -> i32
+pub extern fn vm_apply(receiver: i64, code: i64, action: i64) -> i32
 {
-    simple_unpack();
-//    test_open_publishing();
+    println!("++++++++++++++++++hello, apply!!!!!!!!!{}{}{}", receiver, code, action);
     unsafe {
         say_hello();
     }
-    first + second
+    let receiver = 0;
+    let program = fs::read_to_string("./contracts/native_test.mvir")
+            .expect("Something went wrong reading the file");
+    assert_ok!(compile_and_execute2(receiver, &program, vec![]));
+//    test_open_publishing();
+    return 0;
 }
 
 extern crate libc;
