@@ -217,18 +217,24 @@ pub extern fn vm_setcode(receiver: u64, mut ptr: *mut u8, size: size_t) -> i32
     return 0;
 }
 
+use std::panic;
+
 #[no_mangle]
 pub extern fn vm_apply(receiver: u64, code: u64, action: u64, mut ptr: *mut u8, size: size_t) -> i32
 {
 //    println!("++++++++++++++++++hello, apply!!!!!!!!!{}{}{}", receiver, code, action);
     let program = unsafe { slice::from_raw_parts_mut(ptr, size) };
     let program2 = str::from_utf8(program).unwrap();
-    println!("program2 {:?}", program2);
+//    println!("program2 {:?}", program2);
 /*
     let program = fs::read_to_string("./contracts/native_test.mvir")
             .expect("Something went wrong reading the file");
 */
-    assert_ok!(compile_and_execute2(receiver, &program2, vec![]));
+
+    let result = panic::catch_unwind(|| {compile_and_execute2(receiver, &program2, vec![]);});
+    if result .is_err() {
+        return -1;
+    }
 //    test_open_publishing();
     return 0;
 }
