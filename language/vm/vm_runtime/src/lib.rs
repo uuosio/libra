@@ -129,7 +129,7 @@ mod execution_stack;
 
 pub use move_vm::MoveVM;
 pub use process_txn::verify::static_verify_program;
-pub use txn_executor::execute_function;
+pub use txn_executor::{execute_function, execute_function_ex};
 
 use config::config::VMConfig;
 use state_view::StateView;

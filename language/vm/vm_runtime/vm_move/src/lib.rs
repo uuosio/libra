@@ -20,7 +20,7 @@ use vm::{
 };
 
 use vm_runtime::{
-    execute_function, static_verify_program,
+    execute_function, execute_function_ex, static_verify_program,
     data_cache::{RemoteCache, TransactionDataCache},
     code_cache::module_cache::{ModuleCache, VMModuleCache},
     loaded_data::{
@@ -77,6 +77,40 @@ pub fn execute(
         vec![0, 0],
     );
     execute_function(script, modules, args, &data_view)
+}
+
+/*
+pub fn execute_function_ex(
+    module_cache: VMModuleCache,
+    loaded_main: LoadedModule,
+    entry_func: FunctionRef,
+    data_cache: &RemoteCache,
+)
+*/
+
+pub fn execute_ex(
+    script: VerifiedScript,
+    args: Vec<TransactionArgument>,
+    modules: Vec<VerifiedModule>,
+) -> VMResult<()> {
+    // set up the DB
+    let mut data_view = FakeDataStore::default();
+    data_view.set(
+        AccessPath::new(AccountAddress::random(), vec![]),
+        vec![0, 0],
+    );
+
+    let allocator = Arena::new();
+    let module_cache = VMModuleCache::new(&allocator);
+    let main_module = script.into_module();
+    let loaded_main = LoadedModule::new(main_module);
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
+
+    for m in modules {
+        module_cache.cache_module(m);
+    }
+
+    execute_function_ex(module_cache, entry_func, &data_view)
 }
 
 fn verify(
@@ -155,7 +189,7 @@ pub fn compile_and_execute2(receiver:u64, program: &str, args: Vec<TransactionAr
     let s = map.get(&receiver);
     match map.get(&receiver) {
         Some(cache) => {
-            let ret = execute(cache.clone().script.unwrap(), args, cache.clone().modules.unwrap());
+            let ret = execute_ex(cache.clone().script.unwrap(), args, cache.clone().modules.unwrap());
         //    let s = map.get(&receiver);
         //    PRIVILEGES.insert("Jim", vec!["user"]);
             let end = SystemTime::now();

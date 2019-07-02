@@ -843,6 +843,23 @@ pub fn execute_function(
     vm.execute_function_impl(entry_func)
 }
 
+
+pub fn execute_function_ex(
+    module_cache: VMModuleCache,
+    entry_func: FunctionRef,
+    data_cache: &RemoteCache,
+) -> VMResult<()> {
+    let mut vm = TransactionExecutor {
+        execution_stack: ExecutionStack::new(&module_cache),
+        gas_meter: GasMeter::new(10_000),
+        txn_data: TransactionMetadata::default(),
+        event_data: Vec::new(),
+        data_view: TransactionDataCache::new(data_cache),
+    };
+    vm.execute_function_impl(entry_func)
+}
+
+
 #[cfg(feature = "instruction_synthesis")]
 impl<'alloc, 'txn, P> TransactionExecutor<'alloc, 'txn, P>
 where
