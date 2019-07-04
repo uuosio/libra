@@ -3,6 +3,7 @@
 
 pub mod dispatch;
 pub mod hash;
+pub mod primitive_helpers;
 pub mod signature;
 pub mod db;
 

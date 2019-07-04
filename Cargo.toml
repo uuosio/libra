@@ -48,6 +48,7 @@ members = [
     "network/memsocket",
     "network/netcore",
     "network/noise",
+    "network/socket_bench_server",
     "mempool",
     "storage/accumulator",
     "storage/libradb",
