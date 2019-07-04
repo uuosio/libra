@@ -5,17 +5,22 @@
 //!
 //! This crate contains helpers for executing tests against the Libra VM.
 
+use logger::prelude::*;
+
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use compiler::Compiler;
 use data_store::FakeDataStore;
 use types::{
-    access_path::AccessPath, account_address::AccountAddress, transaction::TransactionArgument,
+    access_path::AccessPath,
+    account_address::AccountAddress,
+    transaction::{Program, RawTransaction, TransactionArgument},
+    vm_error::{VMStatus, VMVerificationError, VMVerificationStatus},
 };
 
 use vm::{
-    access::ModuleAccess,
+    access::{ModuleAccess, ScriptAccess},
     errors::*,
-    file_format::{Bytecode, CodeOffset, CompiledModule, CompiledScript, StructDefinitionIndex},
+    file_format::{Bytecode, CodeOffset, CompiledModule, CompiledScript, SignatureToken, StructDefinitionIndex},
     transaction_metadata::TransactionMetadata,
 };
 
@@ -160,7 +165,77 @@ lazy_static! {
     };    
 }
 
+/// Verify if the transaction arguments match the type signature of the main function.
+fn verify_actuals(script: &CompiledScript, args: &[TransactionArgument]) -> bool {
+    let fh = script.function_handle_at(script.main().function);
+    let sig = script.function_signature_at(fh.signature);
+    if sig.arg_types.len() != args.len() {
+        warn!(
+            "[VM] different argument length: actuals {}, formals {}",
+            args.len(),
+            sig.arg_types.len()
+        );
+        return false;
+    }
+    for (ty, arg) in sig.arg_types.iter().zip(args.iter()) {
+        match (ty, arg) {
+            (SignatureToken::U64, TransactionArgument::U64(_)) => (),
+            (SignatureToken::Address, TransactionArgument::Address(_)) => (),
+            (SignatureToken::ByteArray, TransactionArgument::ByteArray(_)) => (),
+            (SignatureToken::String, TransactionArgument::String(_)) => (),
+            _ => {
+                warn!(
+                    "[VM] different argument type: formal {:?}, actual {:?}",
+                    ty, arg
+                );
+                return false;
+            }
+        }
+    }
+    true
+}
+
+fn verify_program(
+    sender_address: &AccountAddress,
+    program: &Program,
+) -> Result<(VerifiedScript, Vec<VerifiedModule>), VMStatus> {
+    // Ensure modules and scripts deserialize correctly.
+    let script = match CompiledScript::deserialize(&program.code()) {
+        Ok(script) => script,
+        Err(ref err) => {
+            warn!("[VM] script deserialization failed {:?}", err);
+            return Err(err.into());
+        }
+    };
+    if !verify_actuals(&script, program.args()) {
+        return Err(VMStatus::Verification(vec![VMVerificationStatus::Script(
+            VMVerificationError::TypeMismatch("Actual Type Mismatch".to_string()),
+        )]));
+    }
+
+    // Make sure all the modules trying to be published in this module are valid.
+    let modules: Vec<CompiledModule> = match program
+        .modules()
+        .iter()
+        .map(|module_blob| CompiledModule::deserialize(&module_blob))
+        .collect()
+    {
+        Ok(modules) => modules,
+        Err(ref err) => {
+            warn!("[VM] module deserialization failed {:?}", err);
+            return Err(err.into());
+        }
+    };
+
+    // Run the script and module through the bytecode verifier.
+    static_verify_program(sender_address, script, modules).map_err(|statuses| {
+        warn!("[VM] bytecode verifier returned errors");
+        statuses.iter().collect()
+    })
+}
+
 pub fn compile_and_execute2(receiver:u64, program: &str, args: Vec<TransactionArgument>) -> VMResult<()> {
+
 //    let codecache: &'static HashMap<u64, VerifiedScript> = &mut HashMap::new();
     let mut map = HASHMAP.lock().unwrap();
     match map.get(&receiver) {
@@ -177,6 +252,53 @@ pub fn compile_and_execute2(receiver:u64, program: &str, args: Vec<TransactionAr
             let compiled_program = compiler.into_compiled_program().expect("Failed to compile");
             let (verified_script, modules) =
                 verify(&address, compiled_program.script, compiled_program.modules);
+
+            let mut serialized_script = Vec::<u8>::new();
+            verified_script.serialize(&mut serialized_script);
+
+            let mut res = CompiledScript::deserialize(&serialized_script);
+            cache.script = Some(verified_script);
+            cache.modules = Some(modules);
+            map.insert(receiver, cache);
+        }
+    }
+
+    let start = SystemTime::now();
+    let duration_start = start.duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+    let s = map.get(&receiver);
+    match map.get(&receiver) {
+        Some(cache) => {
+            let ret = execute_ex(cache.clone().script.unwrap(), args, cache.clone().modules.unwrap());
+        //    let s = map.get(&receiver);
+        //    PRIVILEGES.insert("Jim", vec!["user"]);
+            let end = SystemTime::now();
+            let duration_end = end.duration_since(UNIX_EPOCH)
+                .expect("Time went backwards");
+            println!("+++++cost: {:?}", duration_end - duration_start);
+            return ret;
+        },
+        None => {
+            Ok(Ok(()))
+        },
+    }
+}
+
+
+pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<TransactionArgument>) -> VMResult<()> {
+//    let codecache: &'static HashMap<u64, VerifiedScript> = &mut HashMap::new();
+    let mut map = HASHMAP.lock().unwrap();
+    match map.get(&receiver) {
+        Some(cache) => {
+        },
+        None => {
+            let mut cache = ContractCache{script:None, modules:None};
+            let program: Program = serde_json::from_slice(&program_bytes)
+                .expect("Unable to deserialize program, is it the output of the compiler?");
+            let (script, _, modules) = program.into_inner();
+            let program_with_args = Program::new(script, modules, vec![]);
+            let address = AccountAddress::default();
+            let (verified_script, modules) = verify_program(&address, &program_with_args).unwrap();
             cache.script = Some(verified_script);
             cache.modules = Some(modules);
             map.insert(receiver, cache);
@@ -224,14 +346,20 @@ pub extern fn vm_apply(receiver: u64, code: u64, action: u64, mut ptr: *mut u8, 
 {
 //    println!("++++++++++++++++++hello, apply!!!!!!!!!{}{}{}", receiver, code, action);
     let program = unsafe { slice::from_raw_parts_mut(ptr, size) };
-    let program2 = str::from_utf8(program).unwrap();
+//    let program2 = str::from_utf8(program).unwrap();
 //    println!("program2 {:?}", program2);
 /*
     let program = fs::read_to_string("./contracts/native_test.mvir")
             .expect("Something went wrong reading the file");
 */
 
-    let result = panic::catch_unwind(|| {compile_and_execute2(receiver, &program2, vec![]);});
+    let mut args: Vec<TransactionArgument> = Vec::new();
+    args.push(TransactionArgument::U64(action));
+    args.push(TransactionArgument::U64(code));
+    args.push(TransactionArgument::U64(receiver));
+
+//    let result = panic::catch_unwind(|| {compile_and_execute2(receiver, &program2, args);});
+    let result = panic::catch_unwind(|| {compile_and_execute3(receiver, &program, vec![]);});
     if result .is_err() {
         return -1;
     }
@@ -265,3 +393,29 @@ void send_inline(char *serialized_action, size_t size)
 void send_context_free_inline(char *serialized_action, size_t size)
 uint64_t  publication_time()
 */
+
+
+
+
+
+
+use proto_conv::IntoProtoBytes;
+use serde_json;
+use std::{
+    io::prelude::*,
+    time::Duration,
+};
+use structopt::StructOpt;
+use transaction_builder::transaction_argument::*;
+
+
+fn main_() {
+
+    let program_bytes = fs::read("").expect("Unable to read file");
+    let program: Program = serde_json::from_slice(&program_bytes)
+        .expect("Unable to deserialize program, is it the output of the compiler?");
+    let (script, _, modules) = program.into_inner();
+    let program_with_args = Program::new(script, modules, vec![]);
+    let address = AccountAddress::default();
+    verify_program(&address, &program_with_args);
+}
