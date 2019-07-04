@@ -45,8 +45,7 @@ main() {
 
     t = Test.new_t();
     Test.unpack_t(move(t));
-
-    input = b"6162633333333333AAAAAABB";
+    input = b"6162633333333333AAAAAA666666";
     input2 = b"8888";
     r = DB.print(copy(input));
     r = DB.print(copy(input));

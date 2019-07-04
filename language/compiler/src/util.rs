@@ -37,6 +37,8 @@ pub fn build_stdlib(address: &AccountAddress) -> Vec<VerifiedModule> {
         "modules/libra_coin.mvir",
         "modules/libra_account.mvir",
         "modules/validator_set.mvir",
+        "modules/debug.mvir",
+        "modules/db.mvir",
     ]
     .iter()
     {

@@ -1,11 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-<<<<<<< HEAD
-use crate::{hash, signature, db};
-=======
-use crate::{hash, primitive_helpers, signature};
->>>>>>> origin/master
+use crate::{hash, primitive_helpers, signature, db, debug};
 pub use failure::Error;
 use failure::*;
 use types::{account_address::AccountAddress, byte_array::ByteArray};
@@ -48,6 +44,7 @@ pub fn dispatch_native_call<T: StackAccessor>(
     module_name: &str,
     function_name: &str,
 ) -> Result<CostedReturnType> {
+//    println!("+++{},{}", module_name, function_name);
     match module_name {
         "Hash" => match function_name {
             "keccak256" => hash::native_keccak_256(accessor),
@@ -92,8 +89,15 @@ pub fn dispatch_native_call<T: StackAccessor>(
                 function_name
             ),
         },
+        "Debug" => match function_name {
+            "print" => debug::native_print(accessor),
+            &_ => bail!(
+                "Unknown native function `{}.{}'",
+                module_name,
+                function_name
+            ),
+        },
         "DB" => match function_name {
-            "print" => db::native_print(accessor),
             "store_i64" => db::native_store_i64(accessor),
             &_ => bail!(
                 "Unknown native function `{}.{}'",

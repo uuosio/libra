@@ -6,6 +6,7 @@ pub mod hash;
 pub mod primitive_helpers;
 pub mod signature;
 pub mod db;
+pub mod debug;
 
 extern crate libc;
 use libc::size_t;

@@ -28,6 +28,10 @@ lazy_static! {
         make_module_definition!("../modules/u64_util.mvir");
     static ref BYTEARRAY_UTIL_MODULE: ModuleDefinition =
         make_module_definition!("../modules/bytearray_util.mvir");
+    static ref DEBUG_MODULE: ModuleDefinition =
+        make_module_definition!("../modules/debug.mvir");
+    static ref DB_MODULE: ModuleDefinition =
+        make_module_definition!("../modules/db.mvir");
 }
 
 pub fn account_module() -> ModuleDefinition {
@@ -60,4 +64,12 @@ pub fn u64_util_module() -> ModuleDefinition {
 
 pub fn bytearray_util_module() -> ModuleDefinition {
     BYTEARRAY_UTIL_MODULE.clone()
+}
+
+pub fn debug_module() -> ModuleDefinition {
+    DEBUG_MODULE.clone()
+}
+
+pub fn db_module() -> ModuleDefinition {
+    DEBUG_MODULE.clone()
 }
