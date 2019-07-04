@@ -394,28 +394,3 @@ void send_context_free_inline(char *serialized_action, size_t size)
 uint64_t  publication_time()
 */
 
-
-
-
-
-
-use proto_conv::IntoProtoBytes;
-use serde_json;
-use std::{
-    io::prelude::*,
-    time::Duration,
-};
-use structopt::StructOpt;
-use transaction_builder::transaction_argument::*;
-
-
-fn main_() {
-
-    let program_bytes = fs::read("").expect("Unable to read file");
-    let program: Program = serde_json::from_slice(&program_bytes)
-        .expect("Unable to deserialize program, is it the output of the compiler?");
-    let (script, _, modules) = program.into_inner();
-    let program_with_args = Program::new(script, modules, vec![]);
-    let address = AccountAddress::default();
-    verify_program(&address, &program_with_args);
-}

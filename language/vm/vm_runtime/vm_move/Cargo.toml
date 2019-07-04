@@ -32,9 +32,10 @@ config =  { path = "../../../../config"}
 logger = { path = "../../../../common/logger" }
 stdlib = { path = "../../../stdlib" }
 vm_cache_map = { path = "../vm_cache_map" }
-
 libc = "0.2.0"
 timeit = "0.1.2"
+
+serde_json = { version = "1.0.38" }
 
 [lib]
 name = "vm_move"
