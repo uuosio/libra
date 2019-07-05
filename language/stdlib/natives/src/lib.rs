@@ -17,11 +17,19 @@ extern {
     fn read_action_data(msg: *mut u8, len: size_t) -> i32;
     fn action_data_size() -> i32;
     fn checktime();
+    fn is_account( name: u64 ) -> bool;
+    fn current_receiver() -> u64;
 }
 
 pub fn vm_checktime() {
     unsafe {
         checktime();
+    }
+}
+
+pub fn vm_current_receiver() ->u64 {
+    unsafe {
+        current_receiver()
     }
 }
 
