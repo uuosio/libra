@@ -70,6 +70,22 @@ lazy_static! {
         let mut m = HashMap::new();
         Mutex::new(m)
     };
+/*
+    static ref S_DATA_VIEW: Mutex<HashMap<u64, FakeDataStore>> = {
+        let mut m = HashMap::new();
+        Mutex::new(m)
+    };
+*/
+
+    static ref S_DATA_VIEW: FakeDataStore = {
+        let mut dv = FakeDataStore::default();
+        dv.set(
+            AccessPath::new(AccountAddress::random(), vec![]),
+            vec![0, 0],
+        );
+        dv
+    };
+
 
 /*
     static ref HASHMAP2: Mutex<CacheMap<'alloc, u64, LoadedModule, FunctionRef<'alloc>>> = {
@@ -249,57 +265,6 @@ fn verify_program(
     })
 }
 
-pub fn compile_and_execute2(receiver:u64, program: &str, args: Vec<TransactionArgument>) -> VMResult<()> {
-
-//    let codecache: &'static HashMap<u64, VerifiedScript> = &mut HashMap::new();
-    let mut map = HASHMAP.lock().unwrap();
-    match map.get(&receiver) {
-        Some(cache) => {
-        },
-        None => {
-            let mut cache = ContractCache{script:None, modules:None};
-            let address = AccountAddress::default();
-            let compiler = Compiler {
-                code: program,
-                address,
-                ..Compiler::default()
-            };
-            let compiled_program = compiler.into_compiled_program().expect("Failed to compile");
-            let (verified_script, modules) =
-                verify(&address, compiled_program.script, compiled_program.modules);
-
-            let mut serialized_script = Vec::<u8>::new();
-            verified_script.serialize(&mut serialized_script);
-
-            let mut res = CompiledScript::deserialize(&serialized_script);
-            cache.script = Some(verified_script);
-            cache.modules = Some(modules);
-            map.insert(receiver, cache);
-        }
-    }
-
-    let start = SystemTime::now();
-    let duration_start = start.duration_since(UNIX_EPOCH)
-        .expect("Time went backwards");
-    let s = map.get(&receiver);
-    match map.get(&receiver) {
-        Some(cache) => {
-            let ret = execute_ex(cache.clone().script.unwrap(), args, cache.clone().modules.unwrap());
-        //    let s = map.get(&receiver);
-        //    PRIVILEGES.insert("Jim", vec!["user"]);
-            let end = SystemTime::now();
-            let duration_end = end.duration_since(UNIX_EPOCH)
-                .expect("Time went backwards");
-            println!("+++++cost: {:?}", duration_end - duration_start);
-            return ret;
-        },
-        None => {
-            Ok(Ok(()))
-        },
-    }
-}
-
-
 pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<TransactionArgument>) -> VMResult<()> {
 //    let codecache: &'static HashMap<u64, VerifiedScript> = &mut HashMap::new();
     let mut map = HASHMAP.lock().unwrap();
@@ -334,21 +299,17 @@ pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<Transa
         }
     }
 
-    let start = SystemTime::now();
-    let duration_start = start.duration_since(UNIX_EPOCH)
-        .expect("Time went backwards");
     let s = map.get(&receiver);
     match map.get(&receiver) {
         Some(cache) => {
             // set up the DB
-            let mut data_view = FakeDataStore::default();
-            data_view.set(
-                AccessPath::new(AccountAddress::random(), vec![]),
-                vec![0, 0],
-            );
+            let start = SystemTime::now();
+            let duration_start = start.duration_since(UNIX_EPOCH)
+                .expect("Time went backwards");
             
             let allocator = Arena::new();
             let module_cache = VMModuleCache::new(&allocator);
+
 
             match &cache.modules {
                 Some(modules) => {
@@ -358,20 +319,25 @@ pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<Transa
                 },
                 None =>{},                
             }
-            match &cache.loaded_main {
-                Some(loaded_main) => {
-                    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
-                    let ret = execute_function_ex(module_cache, entry_func, &data_view);
-                },
-                None => {},
-            }
+
             let end = SystemTime::now();
             let duration_end = end.duration_since(UNIX_EPOCH)
                 .expect("Time went backwards");
-            println!("+++++cost: {:?}", duration_end - duration_start);
+            println!("+++++cache_module cost: {:?}", duration_end - duration_start);
 
-        //    let s = map.get(&receiver);
-        //    PRIVILEGES.insert("Jim", vec!["user"]);
+
+            let start = SystemTime::now();
+            let duration_start = start.duration_since(UNIX_EPOCH)
+                .expect("Time went backwards");
+
+            match &cache.loaded_main {
+                Some(loaded_main) => {
+                    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
+                    let data_view = &*S_DATA_VIEW as &RemoteCache;
+                    let ret = execute_function_ex(module_cache, entry_func, data_view);
+                },
+                None => {},
+            }
             let end = SystemTime::now();
             let duration_end = end.duration_since(UNIX_EPOCH)
                 .expect("Time went backwards");
