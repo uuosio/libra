@@ -35,7 +35,8 @@ use vm_runtime::{
     txn_executor::TransactionExecutor,
 };
 
-use vm_cache_map::Arena;
+use vm_cache_map::{Arena, CacheMap};
+
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 
@@ -55,6 +56,29 @@ pub mod gas_costs;
 mod proptest_types;
 
 use std::time::{SystemTime, UNIX_EPOCH};
+
+
+lazy_static! {
+    static ref HASHMAP: Mutex<HashMap<u64, ContractCache>> = {
+        let mut m = HashMap::new();
+        Mutex::new(m)
+    };
+
+//    static ref codecache: HashMap<u64, &'static FunctionRef<'static>> = HashMap::new();
+
+    static ref codecache: Mutex<HashMap<u64, LoadedModule>> = {
+        let mut m = HashMap::new();
+        Mutex::new(m)
+    };
+
+/*
+    static ref HASHMAP2: Mutex<CacheMap<'alloc, u64, LoadedModule, FunctionRef<'alloc>>> = {
+        let allocator = Arena::new();
+        let mut m = CacheMap::new();
+        Mutex::new(m)
+    };
+*/
+}
 
 /// Compiles a program with the given arguments and executes it in the VM.
 pub fn compile_and_execute(program: &str, args: Vec<TransactionArgument>) -> VMResult<()> {
@@ -104,13 +128,14 @@ pub fn execute_ex(
         AccessPath::new(AccountAddress::random(), vec![]),
         vec![0, 0],
     );
-
+    
     let allocator = Arena::new();
     let module_cache = VMModuleCache::new(&allocator);
     let main_module = script.into_module();
     let loaded_main = LoadedModule::new(main_module);
-    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
 
+    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
+    
     for m in modules {
         module_cache.cache_module(m);
     }
@@ -145,25 +170,15 @@ macro_rules! assert_prologue_disparity {
     };
 }
 
-lazy_static! {
-    // Since it's mutable and shared, use mutex
-    static ref codecache: HashMap<u64, VerifiedScript> = HashMap::new();
-}
-
 use std::sync::Mutex;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct ContractCache {
+    loaded_main: Option<LoadedModule>,
     script: Option<VerifiedScript>,
     modules: Option<Vec<VerifiedModule>>
 }
 
-lazy_static! {
-    static ref HASHMAP: Mutex<HashMap<u64, ContractCache>> = {
-        let mut m = HashMap::new();
-        Mutex::new(m)
-    };    
-}
 
 /// Verify if the transaction arguments match the type signature of the main function.
 fn verify_actuals(script: &CompiledScript, args: &[TransactionArgument]) -> bool {
@@ -292,16 +307,30 @@ pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<Transa
         Some(cache) => {
         },
         None => {
-            let mut cache = ContractCache{script:None, modules:None};
+            let mut cache = ContractCache{loaded_main:None, script:None, modules:None};
             let program: Program = serde_json::from_slice(&program_bytes)
                 .expect("Unable to deserialize program, is it the output of the compiler?");
             let (script, _, modules) = program.into_inner();
             let program_with_args = Program::new(script, modules, vec![]);
             let address = AccountAddress::default();
-            let (verified_script, modules) = verify_program(&address, &program_with_args).unwrap();
-            cache.script = Some(verified_script);
-            cache.modules = Some(modules);
-            map.insert(receiver, cache);
+            match verify_program(&address, &program_with_args) {
+                Ok((verified_script, modules)) => {
+                    let main_module = verified_script.into_module();
+                    let loaded_main = LoadedModule::new(main_module);
+                    cache.loaded_main = Some(loaded_main);
+//                    cache.script = Some(verified_script);
+                    cache.modules = Some(modules);
+                    map.insert(receiver, cache);
+                },
+                Err(err) => {
+                    println!("++error:{:?}", err);
+                    return Ok(Err(VMRuntimeError{
+                        loc: Location::new(),
+                        err: VMErrorKind::InvalidData
+                    }));
+                },
+            }
+//            let (verified_script, modules) = verify_program(&address, &program_with_args).unwrap();
         }
     }
 
@@ -311,14 +340,43 @@ pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<Transa
     let s = map.get(&receiver);
     match map.get(&receiver) {
         Some(cache) => {
-            let ret = execute_ex(cache.clone().script.unwrap(), args, cache.clone().modules.unwrap());
+            // set up the DB
+            let mut data_view = FakeDataStore::default();
+            data_view.set(
+                AccessPath::new(AccountAddress::random(), vec![]),
+                vec![0, 0],
+            );
+            
+            let allocator = Arena::new();
+            let module_cache = VMModuleCache::new(&allocator);
+
+            match &cache.modules {
+                Some(modules) => {
+                    for m in modules {
+                        module_cache.cache_module(m.clone());
+                    }
+                },
+                None =>{},                
+            }
+            match &cache.loaded_main {
+                Some(loaded_main) => {
+                    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
+                    let ret = execute_function_ex(module_cache, entry_func, &data_view);
+                },
+                None => {},
+            }
+            let end = SystemTime::now();
+            let duration_end = end.duration_since(UNIX_EPOCH)
+                .expect("Time went backwards");
+            println!("+++++cost: {:?}", duration_end - duration_start);
+
         //    let s = map.get(&receiver);
         //    PRIVILEGES.insert("Jim", vec!["user"]);
             let end = SystemTime::now();
             let duration_end = end.duration_since(UNIX_EPOCH)
                 .expect("Time went backwards");
             println!("+++++cost: {:?}", duration_end - duration_start);
-            return ret;
+            return  Ok(Ok(()));
         },
         None => {
             Ok(Ok(()))
