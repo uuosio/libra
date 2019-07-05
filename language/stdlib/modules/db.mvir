@@ -1,0 +1,3 @@
+module DB {
+    native public store_i64(scope: u64, table: u64, payer: u64, id: u64, s: bytearray): u64;
+}
