@@ -34,6 +34,8 @@ use vm::{
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
+use move_ir_natives::{vm_checktime, vm_current_receiver};
+use byteorder::{LittleEndian, WriteBytesExt};
 
 #[cfg(test)]
 #[path = "unit_tests/runtime_tests.rs"]
@@ -457,8 +459,14 @@ where
                         .push(Local::u64(self.txn_data.sequence_number()));
                 }
                 Bytecode::GetTxnSenderAddress => {
-                    self.execution_stack
-                        .push(Local::address(self.txn_data.sender()));
+                    let mut receiver = vm_current_receiver();
+                    let mut sender = [0;32];
+                    println!("++++++++receiver is {}", receiver);
+                    for i in 0..8 {
+                        sender[i] = (receiver & 0xff) as u8;
+                        receiver >>= 8;
+                    }
+                    self.execution_stack.push(Local::address(AccountAddress::new(sender)));
                 }
                 Bytecode::GetTxnPublicKey => {
                     self.execution_stack.push(Local::bytearray(ByteArray::new(
