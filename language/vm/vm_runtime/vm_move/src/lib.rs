@@ -21,7 +21,6 @@ use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::*,
     file_format::{Bytecode, CodeOffset, CompiledModule, CompiledScript, SignatureToken, StructDefinitionIndex},
-    transaction_metadata::TransactionMetadata,
 };
 
 use vm_runtime::{
@@ -32,7 +31,6 @@ use vm_runtime::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
     },
-    txn_executor::TransactionExecutor,
 };
 
 use move_ir_natives::{vm_set_last_error, vm_clear_last_error};
@@ -49,16 +47,16 @@ use std::fs;
 mod tests;
 
 pub mod account;
+pub mod data_store;
+
+/*
 pub mod account_universe;
 pub mod common_transactions;
 pub mod compile;
-pub mod data_store;
 pub mod executor;
 pub mod gas_costs;
 mod proptest_types;
-
-use std::time::{SystemTime, UNIX_EPOCH};
-
+*/
 
 lazy_static! {
     static ref HASHMAP: Mutex<HashMap<u64, ContractCache>> = {
