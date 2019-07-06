@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{hash, primitive_helpers, signature, db, debug};
+use crate::{hash, primitive_helpers, signature, db, debug, vm_api};
 pub use failure::Error;
 use failure::*;
 use types::{account_address::AccountAddress, byte_array::ByteArray};
@@ -12,6 +12,7 @@ pub enum NativeReturnType {
     ByteArray(ByteArray),
     Bool(bool),
     UInt64(u64),
+    Void,
 }
 
 pub struct CostedReturnType {
@@ -37,6 +38,7 @@ pub trait StackAccessor {
     fn get_byte_array(&mut self) -> Result<ByteArray>;
     fn get_u64(&mut self) -> Result<u64>;
     fn get_address(&mut self) -> Result<AccountAddress>;
+    fn get_bool(&mut self) -> Result<bool>;
 }
 
 pub fn dispatch_native_call<T: StackAccessor>(
@@ -99,12 +101,31 @@ pub fn dispatch_native_call<T: StackAccessor>(
         },
         "DB" => match function_name {
             "store_i64" => db::native_store_i64(accessor),
+            "update_i64" => db::native_update_i64(accessor),
+            "remove_i64" => db::native_remove_i64(accessor),
+            "get_i64" => db::native_get_i64(accessor),
+            "next_i64" => db::native_next_i64(accessor),
+            "previous_i64" => db::native_previous_i64(accessor),
+            "find_i64" => db::native_find_i64(accessor),
+            "lowerbound_i64" => db::native_lowerbound_i64(accessor),
+            "upperbound_i64" => db::native_upperbound_i64(accessor),
+            "end_i64" => db::native_end_i64(accessor),
             &_ => bail!(
                 "Unknown native function `{}.{}'",
                 module_name,
                 function_name
             ),
         }
+        "VMAPI" => match function_name {
+            "read_action_data" => vm_api::native_read_action_data(accessor),
+            "is_account" => vm_api::native_is_account(accessor),
+            &_ => bail!(
+                "Unknown native function `{}.{}'",
+                module_name,
+                function_name
+            ),
+        }
+        
         &_ => bail!("Unknown native module {}", module_name),
     }
 }
