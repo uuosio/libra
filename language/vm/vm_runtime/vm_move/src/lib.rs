@@ -49,33 +49,11 @@ mod tests;
 pub mod account;
 pub mod data_store;
 
-/*
-pub mod account_universe;
-pub mod common_transactions;
-pub mod compile;
-pub mod executor;
-pub mod gas_costs;
-mod proptest_types;
-*/
-
 lazy_static! {
     static ref HASHMAP: Mutex<HashMap<u64, ContractCache>> = {
         let mut m = HashMap::new();
         Mutex::new(m)
     };
-
-//    static ref codecache: HashMap<u64, &'static FunctionRef<'static>> = HashMap::new();
-
-    static ref codecache: Mutex<HashMap<u64, LoadedModule>> = {
-        let mut m = HashMap::new();
-        Mutex::new(m)
-    };
-/*
-    static ref S_DATA_VIEW: Mutex<HashMap<u64, FakeDataStore>> = {
-        let mut m = HashMap::new();
-        Mutex::new(m)
-    };
-*/
 
     static ref S_DATA_VIEW: FakeDataStore = {
         let mut dv = FakeDataStore::default();
@@ -85,15 +63,6 @@ lazy_static! {
         );
         dv
     };
-
-
-/*
-    static ref HASHMAP2: Mutex<CacheMap<'alloc, u64, LoadedModule, FunctionRef<'alloc>>> = {
-        let allocator = Arena::new();
-        let mut m = CacheMap::new();
-        Mutex::new(m)
-    };
-*/
 }
 
 /// Compiles a program with the given arguments and executes it in the VM.
@@ -268,7 +237,7 @@ fn verify_program(
 pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<TransactionArgument>) -> VMResult<()> {
 //    let codecache: &'static HashMap<u64, VerifiedScript> = &mut HashMap::new();
     let mut map = HASHMAP.lock().unwrap();
-    match map.get(&receiver) {
+    match &map.get(&receiver) {
         Some(cache) => {
         },
         None => {
@@ -299,8 +268,7 @@ pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<Transa
         }
     }
 
-    let s = map.get(&receiver);
-    match map.get(&receiver) {
+    match &map.get(&receiver) {
         Some(cache) => {
             // set up the DB            
             let allocator = Arena::new();
