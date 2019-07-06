@@ -31,6 +31,21 @@ extern {
     fn db_lowerbound_i64(code: u64, scope: u64, table: u64, id: u64) -> i32;
     fn db_upperbound_i64(code: u64, scope: u64, table: u64, id: u64) -> i32;
     fn db_end_i64(code: u64, scope: u64, table: u64) -> i32;
+
+    fn set_last_error(error: *const u8, len: size_t);
+    fn clear_last_error();
+}
+
+pub fn vm_set_last_error(error: &[u8]) {
+    unsafe {
+        set_last_error(error.as_ptr(), error.len());
+    }
+}
+
+pub fn vm_clear_last_error() {
+    unsafe {
+        clear_last_error();
+    }
 }
 
 pub fn vm_checktime() {

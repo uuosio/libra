@@ -32,6 +32,7 @@ config =  { path = "../../../../config"}
 logger = { path = "../../../../common/logger" }
 stdlib = { path = "../../../stdlib" }
 vm_cache_map = { path = "../vm_cache_map" }
+move_ir_natives = { path = "../../../stdlib/natives" }
 libc = "0.2.0"
 timeit = "0.1.2"
 

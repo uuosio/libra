@@ -35,6 +35,8 @@ use vm_runtime::{
     txn_executor::TransactionExecutor,
 };
 
+use move_ir_natives::{vm_set_last_error, vm_clear_last_error};
+
 use vm_cache_map::{Arena, CacheMap};
 
 use std::collections::HashMap;
@@ -354,6 +356,7 @@ use std::panic;
 #[no_mangle]
 pub extern fn vm_apply(receiver: u64, code: u64, action: u64, mut ptr: *mut u8, size: size_t) -> i32
 {
+    vm_clear_last_error();
 //    println!("++++++++++++++++++hello, apply!!!!!!!!!{}{}{}", receiver, code, action);
     let program = unsafe { slice::from_raw_parts_mut(ptr, size) };
 //    let program2 = str::from_utf8(program).unwrap();
@@ -381,12 +384,14 @@ pub extern fn vm_apply(receiver: u64, code: u64, action: u64, mut ptr: *mut u8, 
 */    
     match compile_and_execute3(receiver, &program, vec![]) {
         Ok(oo) => {
-            println!("{:?}", e);
+            println!("{:?}", oo);
             match oo {
                 Ok(o) => {
                     return 0;
                 },
                 Err(e) => {
+                    let error = format!("{:?}", e);
+                    vm_set_last_error(&error.as_bytes());
                     return -1;
                 }
             }
@@ -397,6 +402,8 @@ pub extern fn vm_apply(receiver: u64, code: u64, action: u64, mut ptr: *mut u8, 
                 VMInvariantViolation::EmptyValueStack => {},
                 _ => {},
             }
+            let error = format!("{:?}", e);
+            vm_set_last_error(&error.as_bytes());
             return -1;
         },
     }
