@@ -381,6 +381,7 @@ pub extern fn vm_apply(receiver: u64, code: u64, action: u64, mut ptr: *mut u8, 
 */    
     match compile_and_execute3(receiver, &program, vec![]) {
         Ok(oo) => {
+            println!("{:?}", e);
             match oo {
                 Ok(o) => {
                     return 0;
@@ -399,7 +400,7 @@ pub extern fn vm_apply(receiver: u64, code: u64, action: u64, mut ptr: *mut u8, 
             return -1;
         },
     }
-    return 0;
+    return -1;
 }
 
 #[link(name = "eosiolib_native")]
