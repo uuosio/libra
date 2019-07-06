@@ -43,5 +43,5 @@ pub fn native_print<T: StackAccessor>(mut accessor: T) -> Result<CostedReturnTyp
     */
     vm_print(hash_arg.as_bytes());
 //    println!("{}", hash_arg);
-    Ok(CostedReturnType::new(0, NativeReturnType::Bool(true)))
+    Ok(CostedReturnType::new(0, NativeReturnType::None))
 }
