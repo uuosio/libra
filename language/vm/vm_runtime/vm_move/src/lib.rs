@@ -302,15 +302,9 @@ pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<Transa
     let s = map.get(&receiver);
     match map.get(&receiver) {
         Some(cache) => {
-            // set up the DB
-            let start = SystemTime::now();
-            let duration_start = start.duration_since(UNIX_EPOCH)
-                .expect("Time went backwards");
-            
+            // set up the DB            
             let allocator = Arena::new();
             let module_cache = VMModuleCache::new(&allocator);
-
-
             match &cache.modules {
                 Some(modules) => {
                     for m in modules {
@@ -320,34 +314,26 @@ pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<Transa
                 None =>{},                
             }
 
-            let end = SystemTime::now();
-            let duration_end = end.duration_since(UNIX_EPOCH)
-                .expect("Time went backwards");
-            println!("+++++cache_module cost: {:?}", duration_end - duration_start);
-
-
-            let start = SystemTime::now();
-            let duration_start = start.duration_since(UNIX_EPOCH)
-                .expect("Time went backwards");
-
             match &cache.loaded_main {
                 Some(loaded_main) => {
                     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
                     let data_view = &*S_DATA_VIEW as &RemoteCache;
                     let ret = execute_function_ex(module_cache, entry_func, data_view);
+                    println!("+++execute_function_ex return: {:?}", ret);
+                    return ret;
                 },
-                None => {},
+                None => {
+//                    bail!("no loaded_main");
+                },
             }
-            let end = SystemTime::now();
-            let duration_end = end.duration_since(UNIX_EPOCH)
-                .expect("Time went backwards");
-            println!("+++++cost: {:?}", duration_end - duration_start);
             return  Ok(Ok(()));
         },
         None => {
-            Ok(Ok(()))
+            return Err(VMInvariantViolation::LinkerError);
+//            bail!("no code found!");
         },
     }
+    return Err(VMInvariantViolation::LinkerError);
 }
 
 extern crate libc;
@@ -383,11 +369,36 @@ pub extern fn vm_apply(receiver: u64, code: u64, action: u64, mut ptr: *mut u8, 
     args.push(TransactionArgument::U64(receiver));
 
 //    let result = panic::catch_unwind(|| {compile_and_execute2(receiver, &program2, args);});
+/*
     let result = panic::catch_unwind(|| {compile_and_execute3(receiver, &program, vec![]);});
     if result .is_err() {
         return -1;
     }
-//    test_open_publishing();
+
+    if result .is_err() {
+        return -1;
+    }
+*/    
+    match compile_and_execute3(receiver, &program, vec![]) {
+        Ok(oo) => {
+            match oo {
+                Ok(o) => {
+                    return 0;
+                },
+                Err(e) => {
+                    return -1;
+                }
+            }
+        },
+        Err(e) => {
+            println!("{:?}", e);
+            match e {
+                VMInvariantViolation::EmptyValueStack => {},
+                _ => {},
+            }
+            return -1;
+        },
+    }
     return 0;
 }
 
