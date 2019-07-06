@@ -111,14 +111,14 @@ pub fn native_update_i64<T: StackAccessor>(mut accessor: T) -> Result<CostedRetu
     let payer = accessor.get_u64()?;
     let iterator = accessor.get_u64()?;
     let ret = vm_db_update_i64(iterator as i32, payer, data.as_bytes());
-    Ok(CostedReturnType::new(0, NativeReturnType::None))
+    Ok(CostedReturnType::new(0, NativeReturnType::Void))
 }
 
 pub fn native_remove_i64<T: StackAccessor>(mut accessor: T) -> Result<CostedReturnType> {
     println!("+++++++++++native_remove_i64");
     let iterator = accessor.get_u64()?;
     let ret = vm_db_remove_i64(iterator as i32);
-    Ok(CostedReturnType::new(0, NativeReturnType::None))
+    Ok(CostedReturnType::new(0, NativeReturnType::Void))
 }
 
 
