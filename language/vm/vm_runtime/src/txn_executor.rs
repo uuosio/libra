@@ -34,7 +34,7 @@ use vm::{
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
-use move_ir_natives::{vm_checktime, vm_current_receiver};
+use move_ir_natives::{vm_checktime, vm_current_receiver, vm_is_account};
 use byteorder::{LittleEndian, WriteBytesExt};
 
 #[cfg(test)]
@@ -278,6 +278,8 @@ where
                                 self.execution_stack.push(Local::u64(value));
                                 // Call stack is not reconstructed for a native call, so we just
                                 // proceed on to next instruction.
+                            }
+                            NativeReturnType::Void => {
                             }
                         }
                     } else {
