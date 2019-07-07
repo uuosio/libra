@@ -299,31 +299,13 @@ use std::panic;
 pub extern fn vm_apply(receiver: u64, code: u64, action: u64, mut ptr: *mut u8, size: size_t) -> i32
 {
     vm_clear_last_error();
-//    println!("++++++++++++++++++hello, apply!!!!!!!!!{}{}{}", receiver, code, action);
     let program = unsafe { slice::from_raw_parts_mut(ptr, size) };
-//    let program2 = str::from_utf8(program).unwrap();
-//    println!("program2 {:?}", program2);
-/*
-    let program = fs::read_to_string("./contracts/native_test.mvir")
-            .expect("Something went wrong reading the file");
-*/
 
     let mut args: Vec<TransactionArgument> = Vec::new();
     args.push(TransactionArgument::U64(action));
     args.push(TransactionArgument::U64(code));
     args.push(TransactionArgument::U64(receiver));
 
-//    let result = panic::catch_unwind(|| {compile_and_execute2(receiver, &program2, args);});
-/*
-    let result = panic::catch_unwind(|| {compile_and_execute3(receiver, &program, vec![]);});
-    if result .is_err() {
-        return -1;
-    }
-
-    if result .is_err() {
-        return -1;
-    }
-*/    
     match compile_and_execute3(receiver, &program, vec![]) {
         Ok(oo) => {
             println!("{:?}", oo);
@@ -351,31 +333,3 @@ pub extern fn vm_apply(receiver: u64, code: u64, action: u64, mut ptr: *mut u8, 
     }
     return -1;
 }
-
-#[link(name = "eosiolib_native")]
-extern {
-    fn say_hello();
-    fn read_action_data(msg: *mut u8, len: size_t) -> i32;
-    fn action_data_size() -> i32;
-    fn checktime();
-}
-
-pub fn vm_checktime() {
-    unsafe {
-        checktime();
-    }
-}
-
-/*
-uint32_t read_action_data( void* msg, uint32_t len )
-uint32_t action_data_size()
-void require_recipient( account_name name )
-void require_auth( account_name name )
-bool has_auth( account_name name )
-void require_auth2( account_name name, permission_name permission )
-bool is_account( account_name name )
-void send_inline(char *serialized_action, size_t size)
-void send_context_free_inline(char *serialized_action, size_t size)
-uint64_t  publication_time()
-*/
-
