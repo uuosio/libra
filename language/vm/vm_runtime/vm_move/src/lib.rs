@@ -237,58 +237,46 @@ fn verify_program(
 pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<TransactionArgument>) -> VMResult<()> {
 //    let codecache: &'static HashMap<u64, VerifiedScript> = &mut HashMap::new();
     let mut map = HASHMAP.lock().unwrap();
-    match &map.get(&receiver) {
-        Some(cache) => {
-        },
-        None => {
-            let mut cache = ContractCache{loaded_main:None, script:None, modules:None};
-            let program: Program = serde_json::from_slice(&program_bytes)
-                .expect("Unable to deserialize program, is it the output of the compiler?");
-            let (script, _, modules) = program.into_inner();
-            let program_with_args = Program::new(script, modules, vec![]);
-            let address = AccountAddress::default();
-            match verify_program(&address, &program_with_args) {
-                Ok((verified_script, modules)) => {
-                    let main_module = verified_script.into_module();
-                    let loaded_main = LoadedModule::new(main_module);
-                    cache.loaded_main = Some(loaded_main);
-                    cache.modules = Some(modules);
-                    map.insert(receiver, cache);
-                },
-                Err(err) => {
-                    println!("++error:{:?}", err);
-                    return Err(VMInvariantViolation::LinkerError);
-                },
-            }
+    if let None = map.get(&receiver) {
+        let mut cache = ContractCache{loaded_main:None, script:None, modules:None};
+        let program: Program = serde_json::from_slice(&program_bytes)
+            .expect("Unable to deserialize program, is it the output of the compiler?");
+        let (script, _, modules) = program.into_inner();
+        let program_with_args = Program::new(script, modules, vec![]);
+        let address = AccountAddress::default();
+        match verify_program(&address, &program_with_args) {
+            Ok((verified_script, modules)) => {
+                let main_module = verified_script.into_module();
+                let loaded_main = LoadedModule::new(main_module);
+                cache.loaded_main = Some(loaded_main);
+                cache.modules = Some(modules);
+                map.insert(receiver, cache);
+            },
+            Err(err) => {
+                println!("++error:{:?}", err);
+                return Err(VMInvariantViolation::LinkerError);
+            },
         }
     }
 
-    match &map.get(&receiver) {
-        Some(cache) => {
-            let allocator = Arena::new();
-            let module_cache = VMModuleCache::new(&allocator);
-            match &cache.modules {
-                Some(modules) => {
-                    for m in modules {
-                        module_cache.cache_module(m.clone());
-                    }
-                },
-                None =>{},                
+    if let Some(cache) = map.get(&receiver) {
+        let allocator = Arena::new();
+        let module_cache = VMModuleCache::new(&allocator);
+        if let Some(modules) = &cache.modules {
+            for m in modules {
+                module_cache.cache_module(m.clone());
             }
+        }
 
-            match &cache.loaded_main {
-                Some(loaded_main) => {
-                    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
-                    let data_view = &*S_DATA_VIEW as &RemoteCache;
-                    let ret = execute_function_ex(module_cache, entry_func, data_view);
-                    println!("+++execute_function_ex return: {:?}", ret);
-                    return ret;
-                },
-                None => {},
-            }
-        },
-        None => {},
+        if let  Some(loaded_main) = &cache.loaded_main {
+            let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
+            let data_view = &*S_DATA_VIEW as &RemoteCache;
+            let ret = execute_function_ex(module_cache, entry_func, data_view);
+            println!("+++execute_function_ex return: {:?}", ret);
+            return ret;
+        }
     }
+
     return Err(VMInvariantViolation::LinkerError);
 }
 
