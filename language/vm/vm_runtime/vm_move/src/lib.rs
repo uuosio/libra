@@ -252,25 +252,19 @@ pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<Transa
                     let main_module = verified_script.into_module();
                     let loaded_main = LoadedModule::new(main_module);
                     cache.loaded_main = Some(loaded_main);
-//                    cache.script = Some(verified_script);
                     cache.modules = Some(modules);
                     map.insert(receiver, cache);
                 },
                 Err(err) => {
                     println!("++error:{:?}", err);
-                    return Ok(Err(VMRuntimeError{
-                        loc: Location::new(),
-                        err: VMErrorKind::InvalidData
-                    }));
+                    return Err(VMInvariantViolation::LinkerError);
                 },
             }
-//            let (verified_script, modules) = verify_program(&address, &program_with_args).unwrap();
         }
     }
 
     match &map.get(&receiver) {
         Some(cache) => {
-            // set up the DB            
             let allocator = Arena::new();
             let module_cache = VMModuleCache::new(&allocator);
             match &cache.modules {
@@ -290,16 +284,10 @@ pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<Transa
                     println!("+++execute_function_ex return: {:?}", ret);
                     return ret;
                 },
-                None => {
-//                    bail!("no loaded_main");
-                },
+                None => {},
             }
-            return  Ok(Ok(()));
         },
-        None => {
-            return Err(VMInvariantViolation::LinkerError);
-//            bail!("no code found!");
-        },
+        None => {},
     }
     return Err(VMInvariantViolation::LinkerError);
 }
