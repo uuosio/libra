@@ -18,6 +18,7 @@ use types::{
 };
 use vm::{errors::*, CompiledModule};
 use vm_runtime::data_cache::RemoteCache;
+use move_ir_natives::{vm_store_i256, vm_get_i256, vm_remove_i256};
 
 lazy_static! {
     /// The write set encoded in the genesis transaction.
@@ -47,10 +48,20 @@ pub struct FakeDataStore {
     data: HashMap<AccessPath, Vec<u8>>,
 }
 
+use tiny_keccak::Keccak;
+
 impl FakeDataStore {
     /// Creates a new `FakeDataStore` with the provided initial data.
     pub fn new(data: HashMap<AccessPath, Vec<u8>>) -> Self {
         FakeDataStore { data }
+    }
+
+    pub fn hash(&self, path: &AccessPath) -> [u8; 32] {
+        let mut keccak = Keccak::new_sha3_256();
+        let mut hash = [0u8; 32];
+        keccak.update(&path.path);
+        keccak.finalize(&mut hash);
+        return hash;
     }
 
     /// Adds a [`WriteSet`] to this data store.
@@ -71,14 +82,18 @@ impl FakeDataStore {
     ///
     /// Returns the previous data if the key was occupied.
     pub fn set(&mut self, access_path: AccessPath, data_blob: Vec<u8>) -> Option<Vec<u8>> {
-        self.data.insert(access_path, data_blob)
+        let id = self.hash(&access_path);
+        vm_store_i256(&id, &data_blob)
+//        self.data.insert(access_path, data_blob)
     }
 
     /// Deletes a key from this data store.
     ///
     /// Returns the previous data if the key was occupied.
     pub fn remove(&mut self, access_path: &AccessPath) -> Option<Vec<u8>> {
-        self.data.remove(access_path)
+        let id = self.hash(&access_path);
+        vm_remove_i256(&id)
+//        self.data.remove(access_path)
     }
 
     /// Adds an [`AccountData`] to this data store.
@@ -109,10 +124,18 @@ impl FakeDataStore {
 impl StateView for FakeDataStore {
     fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>> {
         // Since the data is in-memory, it can't fail.
+        let hash = self.hash(&access_path);
+        match vm_get_i256(&hash) {
+            None => Ok(None),
+            Some(blob) => Ok(Some(blob)),
+        }
+
+        /*
         match self.data.get(access_path) {
             None => Ok(None),
             Some(blob) => Ok(Some(blob.clone())),
         }
+        */
     }
 
     fn multi_get(&self, _access_paths: &[AccessPath]) -> Result<Vec<Option<Vec<u8>>>> {

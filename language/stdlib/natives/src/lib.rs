@@ -32,6 +32,12 @@ extern {
     fn db_upperbound_i64(code: u64, scope: u64, table: u64, id: u64) -> i32;
     fn db_end_i64(code: u64, scope: u64, table: u64) -> i32;
 
+    fn db_store_i256( scope: u64, table: u64, payer: u64, id: *const u8, size: size_t, buffer: *const u8, buffer_size: size_t ) -> i32;
+    fn db_update_i256( iterator: i32, payer: u64, buffer: *const u8, buffer_size: size_t );
+    fn db_remove_i256( iterator: i32 );
+    fn db_get_i256( iterator: i32, buffer: *mut u8, buffer_size: size_t ) -> size_t;
+    fn db_find_i256( code: u64, scope: u64, table: u64, id : *const u8, size: size_t ) -> i32;
+
     fn set_last_error(error: *const u8, len: size_t);
     fn clear_last_error();
 }
@@ -125,6 +131,89 @@ pub fn vm_db_end_i64(code: u64, scope: u64, table: u64) -> i32 {
         db_end_i64(code, scope, table)
     }
 }
+
+pub fn vm_store_i256(id: &[u8], buffer: &[u8]) -> Option<Vec<u8>> {
+    let code: u64;
+    let scope: u64;
+    let table: u64;
+    let payer: u64;
+
+    code = vm_current_receiver();
+    scope = code;
+    table = code;
+    payer = code;
+
+    unsafe {
+        assert_eq!(id.len(), 32);
+        assert_eq!(code, vm_current_receiver());
+        let itr = db_find_i256(code, scope, table, id.as_ptr(), id.len());
+        if itr >= 0 {
+            let value = vm_get_i256(id);
+            db_update_i256(itr, payer, buffer.as_ptr(), buffer.len());
+            return value;
+        } else {
+            db_store_i256(scope, table, payer, id.as_ptr(), id.len(), buffer.as_ptr(), buffer.len());
+            return None;
+        }
+    }
+}
+
+pub fn vm_get_i256(id: &[u8]) -> Option<Vec<u8>> {
+    let code: u64;
+    let scope: u64;
+    let table: u64;
+    code = vm_current_receiver();
+    scope = code;
+    table = code;
+
+    unsafe {
+        let itr = db_find_i256(code, scope, table, id.as_ptr(), id.len());
+        if itr < 0 {
+            return None;
+        }
+        let size = db_get_i256(itr, (&mut []).as_mut_ptr(), 0);
+        if size == 0 {
+            return None;
+        }
+        let mut buffer: Vec<u8> = vec![0;size];
+        db_get_i256(itr, (&mut buffer).as_mut_ptr(), size);
+        return Some(buffer);
+    //    Ok([])
+    }
+}
+
+pub fn vm_remove_i256(id: &[u8]) -> Option<Vec<u8>> {
+    let code: u64;
+    let scope: u64;
+    let table: u64;
+    let payer: u64;
+
+    code = vm_current_receiver();
+    scope = code;
+    table = code;
+    payer = code;
+
+    unsafe {
+        assert_eq!(id.len(), 32);
+        assert_eq!(code, vm_current_receiver());
+        let itr = db_find_i256(code, scope, table, id.as_ptr(), id.len());
+        if itr >= 0 {
+            let value = vm_get_i256(id);
+            db_remove_i256(itr);
+            return value;
+        } else {
+            return None;
+        }
+    }
+}
+
+/*
+    fn db_store_i256( code: u64, scope: u64, table: u64, payer: u64, id: *const u8, size: size_t, buffer: *const u8, buffer_size: size_t ) -> i32;
+    fn db_update_i256( iterator: i32, payer: u64, buffer: *const u8, buffer_size: size_t );
+    fn db_remove_i256( iterator: i32 );
+    fn db_get_i256( iterator: i32, buffer: *mut u8, buffer_size: size_t ) -> size_t;
+    fn db_find_i256( code: u64, scope: u64, table: u64, id : *const u8, size: size_t ) -> i32;
+*/
 
 /*
 uint32_t read_action_data( void* msg, len: size_t )
