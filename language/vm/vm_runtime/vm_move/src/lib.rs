@@ -242,8 +242,13 @@ pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<Transa
     let mut map = HASHMAP.lock().unwrap();
     if let None = map.get(&receiver) {
         let mut cache = ContractCache{loaded_main:None, script:None, modules:None};
-        let program: Program = serde_json::from_slice(&program_bytes)
-            .expect("Unable to deserialize program, is it the output of the compiler?");
+        let program;
+        if let Ok(p) = serde_json::from_slice::<Program>(&program_bytes) {
+            program = p;
+        } else {
+            return Err(VMInvariantViolation::LinkerError);
+        }
+
         let (script, _, modules) = program.into_inner();
         let program_with_args = Program::new(script, modules, vec![]);
         let address = AccountAddress::default();
