@@ -8,7 +8,7 @@
 use logger::prelude::*;
 
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
-use compiler::Compiler;
+use compiler::{util, Compiler};
 use data_store::FakeDataStore;
 use types::{
     access_path::AccessPath,
@@ -49,6 +49,15 @@ mod tests;
 pub mod account;
 pub mod data_store;
 
+use std::sync::Mutex;
+
+#[derive(Debug)]
+struct ContractCache {
+    loaded_main: Option<LoadedModule>,
+    script: Option<VerifiedScript>,
+    modules: Option<Vec<VerifiedModule>>
+}
+
 lazy_static! {
     static ref HASHMAP: Mutex<HashMap<u64, ContractCache>> = {
         let mut m = HashMap::new();
@@ -62,6 +71,10 @@ lazy_static! {
             vec![0, 0],
         );
         dv
+    };
+
+    static ref STD_MODULES: Vec<VerifiedModule> = {
+        util::build_stdlib(&AccountAddress::default())
     };
 }
 
@@ -154,16 +167,6 @@ macro_rules! assert_prologue_disparity {
         assert_matches!($e3, &$e4);
     };
 }
-
-use std::sync::Mutex;
-
-#[derive(Debug)]
-struct ContractCache {
-    loaded_main: Option<LoadedModule>,
-    script: Option<VerifiedScript>,
-    modules: Option<Vec<VerifiedModule>>
-}
-
 
 /// Verify if the transaction arguments match the type signature of the main function.
 fn verify_actuals(script: &CompiledScript, args: &[TransactionArgument]) -> bool {
@@ -267,7 +270,11 @@ pub fn compile_and_execute3(receiver:u64, program_bytes: &[u8], args: Vec<Transa
                 module_cache.cache_module(m.clone());
             }
         }
-
+        
+        for m in &*STD_MODULES {
+            module_cache.cache_module(m.clone());
+        }
+        
         if let  Some(loaded_main) = &cache.loaded_main {
             let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
             let data_view = &*S_DATA_VIEW as &RemoteCache;
