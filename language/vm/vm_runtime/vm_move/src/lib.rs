@@ -333,3 +333,9 @@ pub extern fn vm_apply(receiver: u64, code: u64, action: u64, mut ptr: *mut u8, 
     }
     return -1;
 }
+
+
+#[link(name = "vm_eos")]
+extern {
+    fn eos_vm_apply(receiver: u64, code: u64, action: u64, wasm_code: *const u8, wasm_code_size: size_t) -> i32;
+}
