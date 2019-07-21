@@ -1,12 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use bytecode_verifier::verifier::VerifiedModule;
 use ir_to_bytecode::{compiler::compile_module, parser::parse_module};
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{fs, path::Path};
 use types::account_address::AccountAddress;
 use vm::{access::ModuleAccess, file_format::CompiledModule};
 

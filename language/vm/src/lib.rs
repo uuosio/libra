@@ -1,10 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![feature(never_type)]
-#![feature(exhaustive_patterns)]
-#![feature(type_alias_enum_variants)]
-
 #[macro_use]
 extern crate mirai_annotations;
 

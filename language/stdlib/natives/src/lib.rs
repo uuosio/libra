@@ -227,3 +227,4 @@ void send_inline(char *serialized_action, size_t size)
 void send_context_free_inline(char *serialized_action, size_t size)
 uint64_t  publication_time()
 */
+pub mod vector;

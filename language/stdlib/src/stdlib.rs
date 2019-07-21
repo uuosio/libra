@@ -32,6 +32,20 @@ lazy_static! {
         make_module_definition!("../modules/debug.mvir");
     static ref DB_MODULE: ModuleDefinition =
         make_module_definition!("../modules/db.mvir");
+    static ref MODULE_DEFS: Vec<&'static ModuleDefinition> = {
+        vec![
+            &*COIN_MODULE,
+            &*NATIVE_HASH_MODULE,
+            &*ACCOUNT_MODULE,
+            &*SIGNATURE_MODULE,
+            &*VALIDATOR_SET_MODULE,
+            &*ADDRESS_UTIL_MODULE,
+            &*U64_UTIL_MODULE,
+            &*BYTEARRAY_UTIL_MODULE,
+            &*DEBUG_MODULE,
+            &*DB_MODULE,
+        ]
+    };
 }
 
 pub fn account_module() -> ModuleDefinition {
@@ -71,5 +85,9 @@ pub fn debug_module() -> ModuleDefinition {
 }
 
 pub fn db_module() -> ModuleDefinition {
-    DEBUG_MODULE.clone()
+    DB_MODULE.clone()
+}
+
+pub fn module_defs() -> &'static [&'static ModuleDefinition] {
+    &*MODULE_DEFS
 }
