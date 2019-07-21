@@ -1,8 +1,8 @@
 [base]
-peer_id = "<UNUSED>"
-data_dir_path = "<USE_TEMP_DIR>"
+peer_id = "8deeeaed65f0cd7484a9e4e5ac51fbac548f2f71299a05e000156031ca78fb9f"
+data_dir_path = "tmp"
 trusted_peers_file = "/opt/libra/etc/trusted_peers.config.toml"
-peer_keypairs_file = "/opt/libra/etc/peer_keypairs.config.toml"
+peer_keypairs_file = "/opt/libra/etc/8deeeaed65f0cd7484a9e4e5ac51fbac548f2f71299a05e000156031ca78fb9f.node.keys.toml"
 node_sync_batch_size = 1000
 node_sync_retries = 3
 node_sync_channel_buffer_size = 10
@@ -39,7 +39,7 @@ dir = "/opt/libra/data"
 [network]
 seed_peers_file = "/opt/libra/etc/seed_peers.config.toml"
 listen_address = "/ip4/0.0.0.0/tcp/30303"
-advertised_address = "/ip4/SELF_IP/tcp/30303"
+advertised_address = "/ip4/192.168.0.102/tcp/30303"
 discovery_interval_ms = 1000
 connectivity_check_interval_ms = 5000
 enable_encryption_and_authentication = true
