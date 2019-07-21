@@ -107,10 +107,6 @@ impl GasMeter {
         P: ModuleCache<'alloc>,
     {
 //        vm_checktime();
-        let flag = true;
-        if flag {
-            return Ok(Ok(0));
-        }
         // Get the base cost for the instruction.
         let instruction_reqs = match instr {
             Bytecode::Add

@@ -16,32 +16,3 @@ pub fn do_compile_module<T: ModuleAccess>(
     let parsed_module = parse_module(&source).unwrap();
     compile_module(address, &parsed_module, dependencies).unwrap()
 }
-
-pub fn build_stdlib(address: &AccountAddress) -> Vec<VerifiedModule> {
-    // TODO: Change source paths for stdlib when we have proper SDK packaging.
-    let mut stdlib_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    stdlib_root.pop();
-    stdlib_root.push("stdlib");
-
-    let mut stdlib_modules = vec![];
-    for e in [
-        "modules/address_util.mvir",
-        "modules/u64_util.mvir",
-        "modules/bytearray_util.mvir",
-        "modules/hash.mvir",
-        "modules/signature.mvir",
-        "modules/libra_coin.mvir",
-        "modules/libra_account.mvir",
-        "modules/validator_set.mvir",
-        "modules/debug.mvir",
-        "modules/db.mvir",
-    ]
-    .iter()
-    {
-        let res = do_compile_module(&Path::join(&stdlib_root, e), address, &stdlib_modules);
-        let verified_module = VerifiedModule::new(res)
-            .unwrap_or_else(|errors| panic!("Failed to verify module: {:?}: {:?}", e, errors));
-        stdlib_modules.push(verified_module);
-    }
-    stdlib_modules
-}

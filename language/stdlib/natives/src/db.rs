@@ -101,7 +101,7 @@ pub fn native_store_i64<T: StackAccessor>(mut accessor: T) -> Result<CostedRetur
     let scope = accessor.get_u64()?;
     println!("+++++++++++{} {} {} {} {}", scope, table, payer, id, data);
     let ret = vm_db_store_i64(scope, table, payer, id, data.as_bytes());
-    Ok(CostedReturnType::new(0, NativeReturnType::UInt64(ret as u64)))
+    Ok(CostedReturnType::new(0, NativeReturnType::U64(ret as u64)))
 }
 
 //pub fn vm_db_update_i64(iterator: i32, payer: u64, data: &[u8])
@@ -140,7 +140,7 @@ pub fn native_next_i64<T: StackAccessor>(mut accessor: T) -> Result<CostedReturn
     let iterator = accessor.get_u64()?;
     let mut primary: u64 = 0u64;
     let iterator = vm_db_next_i64(iterator as i32, &mut primary);
-    Ok(CostedReturnType::new(0, NativeReturnType::UInt64(iterator as u64)))
+    Ok(CostedReturnType::new(0, NativeReturnType::U64(iterator as u64)))
 }
 
 //pub fn vm_db_previous_i64(iterator: i32, primary: &mut u64) -> i32;
@@ -149,7 +149,7 @@ pub fn native_previous_i64<T: StackAccessor>(mut accessor: T) -> Result<CostedRe
     let iterator = accessor.get_u64()?;
     let mut primary: u64 = 0u64;
     let iterator = vm_db_previous_i64(iterator as i32, &mut primary);
-    Ok(CostedReturnType::new(0, NativeReturnType::UInt64(iterator as u64)))
+    Ok(CostedReturnType::new(0, NativeReturnType::U64(iterator as u64)))
 }
 
 //pub fn vm_db_find_i64(code: u64, scope: u64, table: u64, id: u64) -> i32;
@@ -161,7 +161,7 @@ pub fn native_find_i64<T: StackAccessor>(mut accessor: T) -> Result<CostedReturn
     let code = accessor.get_u64()?;
 
     let iterator = vm_db_find_i64(code, scope, table, id);
-    Ok(CostedReturnType::new(0, NativeReturnType::UInt64(iterator as u64)))
+    Ok(CostedReturnType::new(0, NativeReturnType::U64(iterator as u64)))
 }
 
 //pub fn vm_db_lowerbound_i64(code: u64, scope: u64, table: u64, id: u64) -> i32;
@@ -173,7 +173,7 @@ pub fn native_lowerbound_i64<T: StackAccessor>(mut accessor: T) -> Result<Costed
     let code = accessor.get_u64()?;
 
     let iterator = vm_db_lowerbound_i64(code, scope, table, id);
-    Ok(CostedReturnType::new(0, NativeReturnType::UInt64(iterator as u64)))
+    Ok(CostedReturnType::new(0, NativeReturnType::U64(iterator as u64)))
 }
 
 //pub fn vm_db_upperbound_i64(code: u64, scope: u64, table: u64, id: u64) -> i32;
@@ -185,7 +185,7 @@ pub fn native_upperbound_i64<T: StackAccessor>(mut accessor: T) -> Result<Costed
     let code = accessor.get_u64()?;
 
     let iterator = vm_db_upperbound_i64(code, scope, table, id);
-    Ok(CostedReturnType::new(0, NativeReturnType::UInt64(iterator as u64)))
+    Ok(CostedReturnType::new(0, NativeReturnType::U64(iterator as u64)))
 }
 
 //pub fn vm_db_end_i64(code: u64, scope: u64, table: u64) -> i32;
@@ -196,5 +196,5 @@ pub fn native_end_i64<T: StackAccessor>(mut accessor: T) -> Result<CostedReturnT
     let code = accessor.get_u64()?;
 
     let iterator = vm_db_end_i64(code, scope, table);
-    Ok(CostedReturnType::new(0, NativeReturnType::UInt64(iterator as u64)))
+    Ok(CostedReturnType::new(0, NativeReturnType::U64(iterator as u64)))
 }
